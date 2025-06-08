@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Chatアプリ</title>
+</head>
+<body>
+
+<!-- コンテンツ表示画面 -->
+
+<div>
+    <div> 名前：<input type="text" id="uname"> </div>
+    <div>
+        <textarea id="text" cols="30" rows="10"></textarea>
+        <button id="send">送信</button>
+    </div>
+    <div id="output" style="overflow: auto; height: 300px;"></div>
+</div>
+<!--/ コンテンツ表示画面 -->
+
+
+
+<!-- JQuery -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<!-- JQuery -->
+
+
+<!--** 以下Firebase **-->
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getDatabase, ref, push, set, update, remove, onChildAdded, onChildChanged, onChildRemoved } 
+from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: **************************,
+    authDomain: **************************,
+    projectId: **************************,
+    storageBucket: **************************,
+    messagingSenderId: **************************,
+    appId: **************************
+  };
+
+  
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const dbRef = ref(db, "chat"); //データが入る場所を指定している
+
+  //送信イベント
+  $("#send").on("click",function(){
+    const msg = {
+        uname:$("#uname").val(),
+        text : $("#text").val()
+    };
+    console.log(msg);
+    const newPostRef = push(dbRef); //unique_IDを作成 (深く考えずにこういうものと理解する)
+    set(newPostRef, msg);           //set(キー名,値);
+
+  });
+
+  //受信イベント
+  onChildAdded(dbRef, function(data){ //こういうものシリーズのやつ
+    const msg = data.val(); //msgにオブジェクト変数を渡す。jquaeryに近いらしい
+    const key = data.key;   //unique_を取得（更新・削除）
+    let h  = '<p id="'+key+'">';
+        h += msg.uname; // ＝だけだと上書きされてしまう。＋をすることで前のを残してがっちゃん子できる
+        h +='<br>';
+        h += '<span contentEditable="true" id="'+key+'_update" >'+msg.text+'</span>';
+        h += '<span class="remove" data-key="'+key+'"> × </span>' //「data-○○」は属性を自分で唯一作れる便利なもの
+        h += '<span class="update" data-key="'+key+'"> ↑ </span>'
+        //h +=msg.text;
+        h +='</P>';
+        $("#output").append(h);
+          const output = $("#output")[0]; 
+  output.scrollTop = output.scrollHeight; //更新したところに飛ぶコマンド
+    });
+
+    //削除イベント
+    $("#output").on("click", ".remove",function(){
+      const key= $(this).attr("data-key"); //クリックした特定の削除ボタンをthisで指定。アトリビュートは「属性」
+      const remove_item = ref(db,"chat/"+key); //firebase内に生成されるユニークキーを指定
+      remove(remove_item); //Firebaseデータ削除関数
+    });
+
+    //更新イベント
+    $("#output").on("click",".update",function(){
+      const key=$(this).attr("data-key");
+      update(ref(db,"chat/"+key),{
+            text:$("#"+key+'_update').html()
+      });
+    })
+
+    function deleteMessage(key){
+      const deleteRef = ref(db, `chat/${key}`);
+      remove (deleteRef);
+    }
+
+    //削除処理がfirebase側で実行されたらイベント発生！
+    onChildRemoved(dbRef, function(data){
+      $("#"+data.key).remove(); //DOM操作関数（対象を削除）
+      //const key = data.key;
+      //$(`#msg-${key}`).remove();
+    } );
+
+    //更新処理がfirebase側で実行されたらイベント発生！
+    onChildChanged(dbRef,(data)=>{
+      $("#"+data.key+'_update').html(data.val().text);
+      $("#"+data.key+'_update').fadeOut(800).fadeIn(800);
+    });
+</script>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
